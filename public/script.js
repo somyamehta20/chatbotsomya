@@ -1,3 +1,4 @@
+// Wrap the entire script in a class to keep things organized
 class VoiceBot {
     constructor() {
         this.sessionId = this.generateSessionId();
@@ -6,8 +7,19 @@ class VoiceBot {
         this.audioChunks = [];
         this.currentAudio = null;
 
+        // Example questions to display
+        this.exampleQuestions = [
+            "What should we know about your life story in a few sentences?",
+            "What's your #1 superpower?",
+            "What are the top 3 areas you'd like to grow in?",
+            "What misconception do your coworkers have about you?",
+            "How do you push your boundaries and limits?"
+        ];
+
         this.initializeElements();
         this.bindEvents();
+        this.addWelcomeMessage();
+        this.populateExampleQuestions();
         this.updateStatus('Ready');
     }
 
@@ -19,186 +31,138 @@ class VoiceBot {
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.voiceButton = document.getElementById('voiceButton');
-        this.playButton = document.getElementById('playButton');
         this.chatMessages = document.getElementById('chatMessages');
-        this.statusDot = document.getElementById('statusDot');
-        this.statusText = document.getElementById('statusText');
+        this.statusElement = document.getElementById('status');
+        this.exampleQuestionsContainer = document.getElementById('exampleQuestions');
     }
 
     bindEvents() {
-        // Text input events
-        this.messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
+        this.sendButton.addEventListener('click', () => this.sendMessage());
+        this.messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
                 this.sendMessage();
             }
         });
-
-        this.sendButton.addEventListener('click', () => {
-            this.sendMessage();
-        });
-
-        // Voice recording events
-        this.voiceButton.addEventListener('mousedown', () => {
-            this.startRecording();
-        });
-
-        this.voiceButton.addEventListener('mouseup', () => {
-            this.stopRecording();
-        });
-
-        this.voiceButton.addEventListener('mouseleave', () => {
-            if (this.isRecording) {
-                this.stopRecording();
-            }
-        });
-
-        // Touch events for mobile
+        this.voiceButton.addEventListener('mousedown', () => this.startRecording());
+        this.voiceButton.addEventListener('mouseup', () => this.stopRecording());
         this.voiceButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.startRecording();
         });
-
         this.voiceButton.addEventListener('touchend', (e) => {
             e.preventDefault();
             this.stopRecording();
         });
-
-        // Play button
-        this.playButton.addEventListener('click', () => {
-            this.playLastResponse();
-        });
-
-        // Focus input on load
-        this.messageInput.focus();
     }
 
-    async sendMessage(message = null) {
-        const text = message || this.messageInput.value.trim();
-        if (!text) return;
+    addWelcomeMessage() {
+        const welcomeText = "Hi! I'm your personal voice bot. You can ask me questions about myself, my life story, my superpowers, growth areas, or anything else. I'll respond as authentically as I would in a real conversation. Try asking me something!";
+        this.addMessage('bot', welcomeText);
+    }
 
-        // Clear input
+    populateExampleQuestions() {
+        this.exampleQuestions.forEach(q => {
+            const button = document.createElement('button');
+            button.textContent = q;
+            button.className = 'example-question';
+            button.onclick = () => {
+                this.messageInput.value = q;
+                this.sendMessage();
+            };
+            this.exampleQuestionsContainer.appendChild(button);
+        });
+    }
+
+    async sendMessage() {
+        const messageText = this.messageInput.value.trim();
+        if (!messageText) return;
+
+        this.addMessage('user', messageText);
         this.messageInput.value = '';
-
-        // Add user message to chat
-        this.addMessage(text, 'user');
-
-        // Show typing indicator
-        this.showTypingIndicator();
+        this.updateStatus('Processing...');
 
         try {
-            this.updateStatus('Processing...');
-
             const response = await fetch('/api/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: text,
-                    sessionId: this.sessionId
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: messageText, sessionId: this.sessionId })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to get response');
+                throw new Error(`Server error: ${response.statusText}`);
             }
 
             const data = await response.json();
-
-            // Remove typing indicator
-            this.removeTypingIndicator();
-
-            // Add bot response to chat
-            this.addMessage(data.response, 'bot');
-
-            // Generate and store audio
-            await this.generateAudio(data.response);
-
+            this.addMessage('bot', data.reply, data.audioUrl);
             this.updateStatus('Ready');
 
+            if (data.audioUrl) {
+                this.playAudio(data.audioUrl);
+            }
+
         } catch (error) {
-            console.error('Error:', error);
-            this.removeTypingIndicator();
-            this.addMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            console.error('Error sending message:', error);
+            this.addMessage('bot', "Sorry, I'm having trouble connecting. Please try again later.");
             this.updateStatus('Error');
         }
     }
 
-    addMessage(text, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message`;
+    addMessage(sender, text, audioUrl = null) {
+        const messageWrapper = document.createElement('div');
+        messageWrapper.classList.add('message', `${sender}-message`);
 
-        const icon = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
+        const messageContent = document.createElement('div');
+        messageContent.classList.add('message-content');
+        messageContent.textContent = text;
 
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <i class="${icon}"></i>
-                <p>${this.escapeHtml(text)}</p>
-            </div>
-        `;
-
-        this.chatMessages.appendChild(messageDiv);
-        this.scrollToBottom();
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    showTypingIndicator() {
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'message bot-message typing-indicator';
-        typingDiv.id = 'typingIndicator';
-        typingDiv.innerHTML = `
-            <div class="message-content">
-                <i class="fas fa-robot"></i>
-                <div class="typing-dots">
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                    <div class="typing-dot"></div>
-                </div>
-            </div>
-        `;
-        this.chatMessages.appendChild(typingDiv);
-        this.scrollToBottom();
-    }
-
-    removeTypingIndicator() {
-        const typingIndicator = document.getElementById('typingIndicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
+        // Add an icon for the bot
+        if (sender === 'bot') {
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-robot icon';
+            messageWrapper.appendChild(icon);
         }
+
+        messageWrapper.appendChild(messageContent);
+
+        // If there's audio, create a play button within the message
+        if (audioUrl) {
+            const playButton = document.createElement('button');
+            playButton.className = 'message-play-button';
+            playButton.innerHTML = '<i class="fas fa-play"></i>';
+            playButton.onclick = () => this.playAudio(audioUrl);
+            messageContent.appendChild(playButton);
+        }
+
+        this.chatMessages.appendChild(messageWrapper);
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    updateStatus(text) {
+        this.statusElement.textContent = text;
     }
 
     async startRecording() {
         try {
-            this.updateStatus('Recording...');
-            this.isRecording = true;
-            this.voiceButton.classList.add('recording');
-            this.audioChunks = [];
-
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             this.mediaRecorder = new MediaRecorder(stream);
+            this.audioChunks = [];
 
-            this.mediaRecorder.ondataavailable = (event) => {
+            this.mediaRecorder.ondataavailable = event => {
                 this.audioChunks.push(event.data);
             };
 
             this.mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-                await this.processAudio(audioBlob);
-                stream.getTracks().forEach(track => track.stop());
+                const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                this.sendAudio(audioBlob);
             };
 
             this.mediaRecorder.start();
+            this.isRecording = true;
+            this.updateStatus('Recording...');
+            this.voiceButton.classList.add('recording');
         } catch (error) {
             console.error('Error starting recording:', error);
-            this.updateStatus('Microphone access denied');
-            this.isRecording = false;
-            this.voiceButton.classList.remove('recording');
+            this.updateStatus('Mic access denied');
         }
     }
 
@@ -206,84 +170,57 @@ class VoiceBot {
         if (this.mediaRecorder && this.isRecording) {
             this.mediaRecorder.stop();
             this.isRecording = false;
+            this.updateStatus('Processing audio...');
             this.voiceButton.classList.remove('recording');
         }
     }
 
-    async processAudio(audioBlob) {
+    async sendAudio(audioBlob) {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.webm');
+        formData.append('sessionId', this.sessionId);
+
         try {
-            this.updateStatus('Processing audio...');
-
-            // For now, we'll use a simple approach
-            // In a production app, you'd want to use a speech-to-text service
-            // For demo purposes, we'll show a message asking for text input
-            this.addMessage('Voice input detected! Please type your question for now.', 'bot');
-            this.updateStatus('Ready');
-
-            // Focus on input for user to type
-            this.messageInput.focus();
-
-        } catch (error) {
-            console.error('Error processing audio:', error);
-            this.updateStatus('Audio processing failed');
-        }
-    }
-
-    async generateAudio(text) {
-        try {
-            const response = await fetch('/api/speak', {
+            this.updateStatus('Transcribing...');
+            const response = await fetch('/api/voice', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text })
+                body: formData
             });
 
             if (!response.ok) {
-                throw new Error('Failed to generate audio');
+                throw new Error(`Server error: ${response.statusText}`);
             }
 
-            const audioBlob = await response.blob();
-            this.currentAudio = URL.createObjectURL(audioBlob);
+            const data = await response.json();
+            this.addMessage('user', `"${data.transcript}"`);
+            this.addMessage('bot', data.reply, data.audioUrl);
+            this.updateStatus('Ready');
 
-            // Show play button
-            this.playButton.style.display = 'flex';
+            if (data.audioUrl) {
+                this.playAudio(data.audioUrl);
+            }
 
         } catch (error) {
-            console.error('Error generating audio:', error);
+            console.error('Error sending audio:', error);
+            this.addMessage('bot', "Sorry, I couldn't process the audio. Please try again.");
+            this.updateStatus('Error');
         }
     }
 
-    playLastResponse() {
+    playAudio(audioUrl) {
         if (this.currentAudio) {
-            const audio = new Audio(this.currentAudio);
-            audio.play();
+            this.currentAudio.pause();
         }
-    }
-
-    updateStatus(status) {
-        this.statusText.textContent = status;
-        this.statusDot.className = 'fas fa-circle status-dot';
-
-        if (status === 'Recording...') {
-            this.statusDot.classList.add('recording');
-        } else if (status === 'Processing...' || status === 'Processing audio...') {
-            this.statusDot.classList.add('processing');
-        }
-    }
-
-    scrollToBottom() {
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        this.currentAudio = new Audio(audioUrl);
+        this.currentAudio.play();
+        this.updateStatus('Playing response...');
+        this.currentAudio.onended = () => {
+            this.updateStatus('Ready');
+        };
     }
 }
 
-// Global function for example questions
-function askQuestion(question) {
-    voiceBot.sendMessage(question);
-}
-
-// Initialize the voice bot when the page loads
-let voiceBot;
+// Initialize the bot once the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    voiceBot = new VoiceBot();
+    new VoiceBot();
 }); 
