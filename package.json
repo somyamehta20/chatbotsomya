@@ -1,0 +1,36 @@
+{
+    "name": "voice-bot",
+    "version": "1.0.0",
+    "description": "A voice-enabled chatbot using ChatGPT API",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "build": "echo 'No build step required'",
+        "deploy": "npm start"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "openai": "^4.20.1",
+        "multer": "^1.4.5-lts.1",
+        "node-record-lpcm16": "^1.0.1",
+        "@google-cloud/speech": "^6.0.0",
+        "@google-cloud/text-to-speech": "^5.0.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    },
+    "keywords": [
+        "voice",
+        "chatbot",
+        "openai",
+        "ai"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "engines": {
+        "node": ">=14.0.0"
+    }
+}

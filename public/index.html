@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Voice Bot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-microphone-alt"></i>
+                <h1>Personal Voice Bot</h1>
+            </div>
+            <p class="subtitle">Ask me anything about myself - I'll respond as I would in real life</p>
+        </header>
+
+        <main class="main-content">
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot-message">
+                        <div class="message-content">
+                            <i class="fas fa-robot"></i>
+                            <p>Hi! I'm your personal voice bot. You can ask me questions about myself, my life story, my
+                                superpowers, growth areas, or anything else. I'll respond as authentically as I would in
+                                a real conversation. Try asking me something!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <input type="text" id="messageInput" placeholder="Type your question here..."
+                            class="message-input">
+                        <button id="sendButton" class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <div class="voice-controls">
+                        <button id="voiceButton" class="voice-button">
+                            <i class="fas fa-microphone"></i>
+                            <span>Hold to Speak</span>
+                        </button>
+                        <button id="playButton" class="play-button" style="display: none;">
+                            <i class="fas fa-play"></i>
+                            <span>Play Response</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="example-questions">
+                    <h3>Example Questions</h3>
+                    <div class="question-list">
+                        <button class="example-question"
+                            onclick="askQuestion('What should we know about your life story in a few sentences?')">
+                            What should we know about your life story in a few sentences?
+                        </button>
+                        <button class="example-question" onclick="askQuestion('What\'s your #1 superpower?')">
+                            What's your #1 superpower?
+                        </button>
+                        <button class="example-question"
+                            onclick="askQuestion('What are the top 3 areas you\'d like to grow in?')">
+                            What are the top 3 areas you'd like to grow in?
+                        </button>
+                        <button class="example-question"
+                            onclick="askQuestion('What misconception do your coworkers have about you?')">
+                            What misconception do your coworkers have about you?
+                        </button>
+                        <button class="example-question"
+                            onclick="askQuestion('How do you push your boundaries and limits?')">
+                            How do you push your boundaries and limits?
+                        </button>
+                    </div>
+                </div>
+
+                <div class="status-indicator">
+                    <div class="status-item">
+                        <i class="fas fa-circle status-dot" id="statusDot"></i>
+                        <span id="statusText">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
